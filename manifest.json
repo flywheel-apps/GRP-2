@@ -1,0 +1,48 @@
+{
+	"name": "harsha-error-report",
+	"label": "Error Report Generator",
+	"description": "Created by the gear builder. Edit the manifest file to give this gear a description!",
+	"version": "9",
+	"inputs": {
+		"api-key": {
+			"base": "api-key"
+		}
+	},
+	"config": {
+		"container_type": {
+			"default": "all",
+			"description": "A container type (singular) to accumulate",
+			"type": "string"
+		},
+		"file_type": {
+			"default": "json",
+			"description": "File Type of report (json or csv)",
+			"type": "string"
+		},
+		"filename": {
+			"default": "",
+			"description": "Optional report name override",
+			"type": "string"
+		}
+	},
+	"environment": {
+		"GPG_KEY": "0D96DF4D4110E5C43FBFB17F2D347EA6AA65421D",
+		"LANG": "C.UTF-8",
+		"PATH": "/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+		"PYTHON_PIP_VERSION": "18.1",
+		"PYTHON_VERSION": "3.7.1"
+	},
+	"author": "Harsha Kethineni",
+	"maintainer": "Harsha Kethineni",
+	"cite": "List citations here.",
+	"license": "Other",
+	"source": "",
+	"url": "",
+	"custom": {
+		"gear-builder": {
+			"category": "converter",
+			"container": "401a205308f91f2b80fc25484a7d1799d3d53e87eb471f1dbc7579a0f0b99c2b",
+			"image": "gear-builder-bnnsepxvkf-20190321170027"
+		}
+	}
+}
