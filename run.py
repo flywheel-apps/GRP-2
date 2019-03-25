@@ -4,6 +4,7 @@ import csv
 import datetime
 import flywheel
 import json
+import logging
 
 
 CSV_HEADERS = [
@@ -13,7 +14,41 @@ CSV_HEADERS = [
     'resolved'
 ]
 
-log = None
+log = logging.getLogger('grp-2')
+
+
+def collect_containers(finder, container_type, collect_acquisitions=False,
+                       skip_sessions=False):
+    """Iterates over finder for containers with tags=error filter, and returns
+    a list of dictionaries with the container id, label, and type
+
+    Args:
+        finder (Finder): A flywheel sdk finder
+        container_type (str): The container type returned by the finder
+        collect_acquisitions (bool): Optional flag to iterate over the
+            acquisitions
+        skip_sessions (bool): Optional flag to skip collecting sessions if only
+            collecting acquisitions
+
+    Returns:
+        list: A list of dictionaries with the container id, label, and type set
+    """
+    error_containers = []
+    for container in finder.find('tags=error'):
+        if container_type != 'session' or not skip_sessions:
+            error_containers.append({
+                '_id': container.id,
+                'label': container.label,
+                'type': container_type
+            })
+        if collect_acquisitions:
+            for acquisition in container.acquisitions.find('tags=error'):
+                error_containers.append({
+                    '_id': acquisition.id,
+                    'label': acquisition.label,
+                    'type': 'acquisition'
+                })
+    return error_containers
 
 
 def find_error_containers(container_type, parent):
@@ -32,6 +67,8 @@ def find_error_containers(container_type, parent):
             error
     """
     error_containers = []
+    if container_type not in ['all', 'subject', 'session', 'acquisition']:
+        raise ValueError('Container type {} not valid'.format(container_type))
 
     # If collecting all container types under the project or just subjects
     if (
@@ -44,12 +81,7 @@ def find_error_containers(container_type, parent):
             raise ValueError('Cannot find subjects of a parent of type %s',
                              parent.container_type)
 
-        for subject in parent.subjects.find('tags=error'):
-            error_containers.append({
-                '_id': subject.id,
-                'label': subject.label,
-                'type': 'subject'
-            })
+        error_containers += collect_containers(parent.subjects, 'subject')
 
     # If collecting all container types under a project or a subject; or just
     # the sessions under a container, or acquisitions
@@ -65,20 +97,11 @@ def find_error_containers(container_type, parent):
             raise ValueError('Cannot find sessions of a parent of type %s',
                              parent.container_type)
 
-        for session in parent.sessions.find('tags=error'):
-            if container_type != 'acquisition':
-                error_containers.append({
-                    '_id': session.id,
-                    'label': session.label,
-                    'type': 'session'
-                })
-            if container_type == 'acquisition' or container_type == 'all':
-                for acquisition in session.acquisitions.find('tags=error'):
-                    error_containers.append({
-                        '_id': acquisition.id,
-                        'label': acquisition.label,
-                        'type': 'acquisition'
-                    })
+        collect_acquisitions = container_type == 'all' or container_type == 'acquisition'
+        skip_sessions = container_type == 'acquisition'
+        error_containers += collect_containers(parent.sessions, 'session',
+                                               collect_acquisitions=collect_acquisitions,
+                                               skip_sessions=skip_sessions)
 
     # If the parent type is a session, loop through the acquisitions
     if parent.container_type == 'session':
@@ -86,12 +109,7 @@ def find_error_containers(container_type, parent):
             # User should not choose a session to run if container_type is not
             # all or acquisition
             raise ValueError('Invalid container type {} for children of session'.format(container_type))
-        for acquisition in parent.acquisitions.find('tags=error'):
-            error_containers.append({
-                '_id': acquisition.id,
-                'label': acquisition.label,
-                'type': 'acquisition'
-            })
+        error_containers += collect_containers(parent.acquisitions, 'acquisition')
 
     return error_containers
 
@@ -157,8 +175,6 @@ def set_resolved_status(error_containers, client, validator):
 def main():
     with flywheel.GearContext() as gear_context:
         gear_context.init_logging()
-        global log
-        log = gear_context.log
         log.info(gear_context.config)
         log.info(gear_context.destination)
         container_type = gear_context.config.get('container_type')
@@ -173,6 +189,8 @@ def main():
 
         # Set the status for the containers
         log.info('Resolving status for invalid containers...')
+        # TODO: Figure out the validator stuff, maybe have our validation be a
+        # pip module?
         set_resolved_status(error_containers, gear_context.client,
                             lambda x: True)
 

@@ -11,7 +11,7 @@
 	"config": {
 		"container_type": {
 			"default": "all",
-			"description": "A container type (singular) to accumulate",
+			"description": "A container type (singular) to accumulate, or all",
 			"type": "string"
 		},
 		"file_type": {
@@ -37,6 +37,7 @@
 	"cite": "List citations here.",
 	"license": "Other",
 	"source": "",
+	"command": "python run.py",
 	"url": "",
 	"custom": {
 		"gear-builder": {
