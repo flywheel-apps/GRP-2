@@ -31,7 +31,7 @@ jobs:
           name: Install Docker client
           command: |
             set -x
-            VER="17.03.0-ce"
+            VER="18.06.3-ce"
             wget -O - https://download.docker.com/linux/static/stable/x86_64/docker-$VER.tgz | tar xz -C /tmp
             mv /tmp/docker/* /usr/bin
 
@@ -47,7 +47,7 @@ jobs:
       - run:
           name: build docker image
           command: |
-            docker build -t grp-2 .
+            docker build -t grp-2 --target base .
 
       - deploy:
           name: Deploy Docker Image

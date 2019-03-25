@@ -39,7 +39,7 @@ main() {
     DOCKER_IMAGE="flywheel/grp-2:${DOCKER_TAG}"
 
     if [ "${BUILD_IMAGE}" == "1" ]; then
-        docker build -f "${DOCKERFILE}" -t "${DOCKER_IMAGE}" .
+        docker build -f "${DOCKERFILE}" -t "${DOCKER_IMAGE}" --target testing .
     fi
 
     docker run -it --rm \

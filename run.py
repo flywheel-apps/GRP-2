@@ -88,8 +88,8 @@ def find_error_containers(container_type, parent):
     # NOTE: This is because we have to loop through the sessions to get through
     # all acquisitions of a project or subject
     if (
-        ( container_type == 'all' and parent.container_type in ['project', 'subject'])  or
-        ( container_type in ['session', 'acquisition'])
+        ( container_type in ['all', 'acquisition'] and parent.container_type in ['project', 'subject'])  or
+        ( container_type == 'session')
     ):
         if parent.container_type not in ['project', 'subject'] and container_type == 'session':
             # If the parent type isn't a container above a session, but session
@@ -163,12 +163,13 @@ def set_resolved_status(error_containers, client, validator):
     for container_dictionary in error_containers:
         container = client.get_container(container_dictionary['_id'])
         resolved = validator(container)
-        if resolved and container.get_file('error.log'):
-            log.info('Deleting error.log for {}={}...'.format(
-                container.container_type,
-                container.id
-            ))
-            container.delete_file('error.log')
+        if resolved:
+            if container.get_file('error.log'):
+                log.info('Deleting error.log for {}={}...'.format(
+                    container.container_type,
+                    container.id
+                ))
+                container.delete_file('error.log')
             container.delete_tag('error')
         container_dictionary['resolved'] = resolved
 

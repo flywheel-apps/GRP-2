@@ -84,6 +84,93 @@ def test_find_acquisition_project():
         }
     ]
     actual_value = grp.find_error_containers('acquisition', project)
-    print(actual_value)
     assert expected_value == actual_value
+
+
+def test_find_all_subject():
+    subject = MockParent('subject')
+    expected_value = [
+        {
+            '_id': 'session_id',
+            'label': 'session_label',
+            'type': 'session'
+        },
+        {
+            '_id': 'acquisition_id',
+            'label': 'acquisition_label',
+            'type': 'acquisition'
+        }
+    ]
+
+    assert expected_value == grp.find_error_containers('all', subject)
+
+
+def test_find_subject_subject():
+    subject = MockParent('subject')
+    with pytest.raises(ValueError):
+        grp.find_error_containers('subject', subject)
+
+
+def test_find_session_subject():
+    subject = MockParent('subject')
+    expected_value = [
+        {
+            '_id': 'session_id',
+            'label': 'session_label',
+            'type': 'session'
+        }
+    ]
+
+    assert expected_value == grp.find_error_containers('session', subject)
+
+
+def test_find_acquisition_subject():
+    subject = MockParent('subject')
+    expected_value = [
+        {
+            '_id': 'acquisition_id',
+            'label': 'acquisition_label',
+            'type': 'acquisition'
+        }
+    ]
+
+    assert expected_value == grp.find_error_containers('acquisition', subject)
+
+
+def test_find_all_session():
+    session = MockParent('session')
+    expected_value = [
+        {
+            '_id': 'acquisition_id',
+            'label': 'acquisition_label',
+            'type': 'acquisition'
+        }
+    ]
+
+    assert expected_value == grp.find_error_containers('all', session)
+
+
+def test_find_subject_session():
+    session = MockParent('session')
+    with pytest.raises(ValueError):
+        grp.find_error_containers('subject', session)
+
+
+def test_find_session_session():
+    session = MockParent('session')
+    with pytest.raises(ValueError):
+        grp.find_error_containers('session', session)
+
+
+def test_find_acquisition_session():
+    session = MockParent('session')
+    expected_value = [
+        {
+            '_id': 'acquisition_id',
+            'label': 'acquisition_label',
+            'type': 'acquisition'
+        }
+    ]
+
+    assert expected_value == grp.find_error_containers('acquisition', session)
 
