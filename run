@@ -151,6 +151,7 @@ def set_resolved_status(error_containers, client, validator):
                 container.id
             ))
             container.delete_file('error.log')
+            container.delete_tag('error')
         container_dictionary['resolved'] = resolved
 
 def main():
