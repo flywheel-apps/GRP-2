@@ -1,8 +1,8 @@
 {
-	"name": "harsha-error-report",
+	"name": "metadata-error-report",
 	"label": "Error Report Generator",
-	"description": "Created by the gear builder. Edit the manifest file to give this gear a description!",
-	"version": "9",
+	"description": "A validation error report generator and resolver",
+	"version": "0.0.1",
 	"inputs": {
 		"api-key": {
 			"base": "api-key"
@@ -32,18 +32,14 @@
 		"PYTHON_PIP_VERSION": "18.1",
 		"PYTHON_VERSION": "3.7.1"
 	},
+	"command": "python run.py",
 	"author": "Harsha Kethineni",
 	"maintainer": "Harsha Kethineni",
 	"cite": "List citations here.",
 	"license": "Other",
 	"source": "",
-	"command": "python run.py",
 	"url": "",
 	"custom": {
-		"gear-builder": {
-			"category": "converter",
-			"container": "401a205308f91f2b80fc25484a7d1799d3d53e87eb471f1dbc7579a0f0b99c2b",
-			"image": "gear-builder-bnnsepxvkf-20190321170027"
-		}
+		"dicom-image": "flywheel/metadata-error-report-grp-2:0.0.1"
 	}
 }

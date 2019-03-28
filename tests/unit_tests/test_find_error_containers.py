@@ -1,5 +1,5 @@
 import pytest
-import run as grp
+import run
 
 
 class MockFinder(object):
@@ -45,7 +45,7 @@ def test_find_all_for_project():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('all', project)
+    assert expected_value == run.find_error_containers('all', project)
 
 
 def test_find_subject_project():
@@ -58,7 +58,7 @@ def test_find_subject_project():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('subject', project)
+    assert expected_value == run.find_error_containers('subject', project)
 
 
 def test_find_session_project():
@@ -71,7 +71,7 @@ def test_find_session_project():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('session', project)
+    assert expected_value == run.find_error_containers('session', project)
 
 
 def test_find_acquisition_project():
@@ -83,7 +83,7 @@ def test_find_acquisition_project():
             'type': 'acquisition'
         }
     ]
-    actual_value = grp.find_error_containers('acquisition', project)
+    actual_value = run.find_error_containers('acquisition', project)
     assert expected_value == actual_value
 
 
@@ -102,13 +102,13 @@ def test_find_all_subject():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('all', subject)
+    assert expected_value == run.find_error_containers('all', subject)
 
 
 def test_find_subject_subject():
     subject = MockParent('subject')
     with pytest.raises(ValueError):
-        grp.find_error_containers('subject', subject)
+        run.find_error_containers('subject', subject)
 
 
 def test_find_session_subject():
@@ -121,7 +121,7 @@ def test_find_session_subject():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('session', subject)
+    assert expected_value == run.find_error_containers('session', subject)
 
 
 def test_find_acquisition_subject():
@@ -134,7 +134,7 @@ def test_find_acquisition_subject():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('acquisition', subject)
+    assert expected_value == run.find_error_containers('acquisition', subject)
 
 
 def test_find_all_session():
@@ -147,19 +147,19 @@ def test_find_all_session():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('all', session)
+    assert expected_value == run.find_error_containers('all', session)
 
 
 def test_find_subject_session():
     session = MockParent('session')
     with pytest.raises(ValueError):
-        grp.find_error_containers('subject', session)
+        run.find_error_containers('subject', session)
 
 
 def test_find_session_session():
     session = MockParent('session')
     with pytest.raises(ValueError):
-        grp.find_error_containers('session', session)
+        run.find_error_containers('session', session)
 
 
 def test_find_acquisition_session():
@@ -172,5 +172,5 @@ def test_find_acquisition_session():
         }
     ]
 
-    assert expected_value == grp.find_error_containers('acquisition', session)
+    assert expected_value == run.find_error_containers('acquisition', session)
 

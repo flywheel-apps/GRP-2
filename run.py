@@ -5,6 +5,7 @@ import datetime
 import flywheel
 import json
 import logging
+import jsonschema
 
 
 CSV_HEADERS = [
@@ -150,28 +151,98 @@ def create_output_file(container_type, error_containers, file_type,
     return output_filename
 
 
-def set_resolved_status(error_containers, client, validator):
+def dictionary_lookup(field, dictionary):
+    """A traverses a dictionary with a period seperated list of fields as a str
+
+    Args:
+        field (str): period separated string of fields
+        dictionary (dict): the dictionary to lookup
+
+    Returns:
+        object: the value stored in the dictionary, None if it was not found
+    """
+    d = dictionary
+    for part in field.split('.'):
+        if isinstance(d, dict):
+            if part in d:
+                d = d[part]
+            else:
+                return None
+        elif isinstanced(d, list) and part.isdigit():
+            if int(part) < len(d):
+                d = d[int(part)]
+            else:
+                return None
+        else:
+            return None
+    return d
+
+
+def validate(instance, schema):
+    """Wraps jsonschema.validate so that it returns a boolean instead of
+    raising an Error
+
+    Args:
+        instance (object): The instance to validate
+        schema (dict): A valid json schema
+
+    Returns:
+        bool: Wether or the instance satisfies the schema
+    """
+    try:
+        jsonschema.validate(instance, schema)
+        return True
+    except jsonschema.ValidationError:
+        return False
+
+
+def validate_container(error_log, container):
+    """Uses parameters given in the error log to validate the container
+
+    Args:
+        error_log (list): list of error objects
+        container (Container): The container to validate
+
+    Returns:
+        bool: Whether the container is valid
+    """
+    for error in error_log:
+        schema = error.get('schema')
+        item = error.get('item')
+        value = dictionary_lookup(item, container.to_dict())
+        if schema.pop('required', None) and value is None:
+            return False
+        if not validate(value, schema):
+            return False
+    return True
+
+
+def set_resolved_status(error_containers, client):
     """Sets the resolved boolean on the container dictionary in error the
     containers
 
     Args:
         error_containers (list): list of container dictionaries
         client (Client): An api client
-        validator (function): A function that return true or false given a
-            container
     """
     for container_dictionary in error_containers:
         container = client.get_container(container_dictionary['_id'])
-        resolved = validator(container)
-        if resolved:
-            if container.get_file('error.log'):
+        if container.get_file('error.log'):
+            error_log = json.loads(container.read_file('error.log'))
+            resolved = validate_container(error_log, container)
+            if resolved:
                 log.info('Deleting error.log for {}={}...'.format(
                     container.container_type,
                     container.id
                 ))
                 container.delete_file('error.log')
+                container.delete_tag('error')
+        else:
+            # If the error file isn't there, assume it was resolved
+            resolved = True
             container.delete_tag('error')
         container_dictionary['resolved'] = resolved
+
 
 def main():
     with flywheel.GearContext() as gear_context:
@@ -192,8 +263,7 @@ def main():
         log.info('Resolving status for invalid containers...')
         # TODO: Figure out the validator stuff, maybe have our validation be a
         # pip module?
-        set_resolved_status(error_containers, gear_context.client,
-                            lambda x: True)
+        set_resolved_status(error_containers, gear_context.client)
 
         log.info('Writing error report')
         filename = create_output_file(container_type, error_containers,

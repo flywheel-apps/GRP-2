@@ -1,6 +1,7 @@
 import flywheel
 import pytest
-import run as grp
+import mock
+import run
 
 
 class MockClient(object):
@@ -31,6 +32,8 @@ class MockContainer(object):
             return name
         else:
             return None
+    def read_file(self, name):
+        return 'true'
     def delete_file(self, name):
         if name in self.files:
             self.files.remove(name)
@@ -45,7 +48,6 @@ class MockContainer(object):
 
 def test_set_resolved_true():
     client = MockClient(True)
-    validator = lambda x: True
     error_containers = [
         {'_id': 'container_id'}
     ]
@@ -54,7 +56,8 @@ def test_set_resolved_true():
     assert container.files == ['error.log']
     assert container.tags == ['error']
 
-    grp.set_resolved_status(error_containers, client, validator)
+    with mock.patch('run.validate_container', return_value=True):
+        run.set_resolved_status(error_containers, client)
     container = client.get_container('container_id')
 
     assert error_containers[0]['resolved'] is True
@@ -64,7 +67,6 @@ def test_set_resolved_true():
 
 def test_set_resolved_false():
     client = MockClient(True)
-    validator = lambda x: False
     error_containers = [
         {'_id': 'container_id'}
     ]
@@ -73,7 +75,8 @@ def test_set_resolved_false():
     assert container.files == ['error.log']
     assert container.tags == ['error']
 
-    grp.set_resolved_status(error_containers, client, validator)
+    with mock.patch('run.validate_container', return_value=False):
+        run.set_resolved_status(error_containers, client)
     container = client.get_container('container_id')
 
     assert error_containers[0]['resolved'] is False
@@ -83,7 +86,6 @@ def test_set_resolved_false():
 
 def test_set_resolved_true_no_file():
     client = MockClient(True)
-    validator = lambda x: True
     error_containers = [
         {'_id': 'container_id'}
     ]
@@ -93,7 +95,8 @@ def test_set_resolved_true_no_file():
     assert container.files == []
     assert container.tags == ['error']
 
-    grp.set_resolved_status(error_containers, client, validator)
+    with mock.patch('run.validate_container', return_value=True):
+        run.set_resolved_status(error_containers, client)
     container = client.get_container('container_id')
 
     assert error_containers[0]['resolved'] is True
