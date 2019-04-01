@@ -9,13 +9,52 @@ import jsonschema
 
 
 CSV_HEADERS = [
-    '_id',
-    'label',
+    'path',
     'type',
-    'resolved'
+    'resolved',
+    'label',
+    '_id'
 ]
 
 log = logging.getLogger('grp-2')
+
+
+def get_resolver_path(client, container):
+    """Generates the resolveer path for a container
+
+    Args:
+        client (Client): Flywheel Api client
+        container (Container): A flywheel container
+
+    Returns:
+        str: A human-readable resolver path that can be used to find the
+            container
+    """
+    resolver_path = []
+    for parent_type in ['group', 'project', 'subject', 'session']:
+        parent_id = container.parents.get(parent_type)
+        if parent_id:
+            if parent_type == 'group':
+                path_part = client.get(parent_id).id
+            else:
+                path_part = client.get(parent_id).label
+            resolver_path.append(path_part)
+        else:
+            break
+    resolver_path.append(container.label)
+    return '/'.join(resolver_path)
+
+
+def set_resolver_paths(error_containers, client):
+    """Sets the resolver path for the list of error containers
+
+    Args:
+        error_containers (list): list of container dictionaries
+        client (Client): Flywheel Api client
+    """
+    for error_container in error_containers:
+        container = client.get(error_container['_id'])
+        error_container['path'] = get_resolver_path(client, container)
 
 
 def collect_containers(finder, container_type, collect_acquisitions=False,
@@ -132,9 +171,8 @@ def create_output_file(container_type, error_containers, file_type,
         str: The filename that was used to write the report as
     """
     file_ext = 'csv' if file_type == 'csv' else 'json'
-    output_filename = output_filename or 'error-report-{}-{}.{}'.format(
+    output_filename = output_filename or 'error-report-{}.{}'.format(
         container_type,
-        datetime.datetime.utcnow(),
         file_ext
     )
     with gear_context.open_output(output_filename, 'w') as output_file:
@@ -244,20 +282,63 @@ def set_resolved_status(error_containers, client):
         container_dictionary['resolved'] = resolved
 
 
+def update_analysis_label(parent_type, parent_id, analysis_id, analysis_label,
+                          apikey, api_url):
+    """Helper function to make a request to the api without the sdk because the
+    sdk doesn't support updating analysis labels
+
+    Args:
+        parent_type (str): Singularized container type
+        parent_id (str): The id of the parent
+        analysis_id (str): The id of the analysis
+        analysis_label (str): The label that should be set for the analysis
+        apikey (str): The api key for the client
+        api_url (str): The url for the api
+
+    Returns:
+        dict: Api response for the request
+    """
+    import requests
+
+    url = '{api_url}/{parent_name}/{parent_id}/analyses/{analysis_id}'.format(
+        api_url=api_url,
+        parent_name=parent_type+'s',
+        parent_id=parent_id,
+        analysis_id=analysis_id
+    )
+
+    headers = {
+        'Authorization': 'scitran-user {}'.format(apikey),
+        'Content-Type': 'application/json'
+    }
+
+    data = json.dumps({
+        "label": analysis_label
+    })
+
+    raw_response = requests.put(url, headers=headers, data=data)
+    return raw_response.json()
+
+
 def main():
     with flywheel.GearContext() as gear_context:
         gear_context.init_logging()
         log.info(gear_context.config)
         log.info(gear_context.destination)
         container_type = gear_context.config.get('container_type')
-        parent = gear_context.client.get_container(
+        analysis = gear_context.client.get_analysis(
             gear_context.destination['id']
         )
+        parent = gear_context.client.get_container(analysis.parent['id'])
 
         # Get all containers
         # TODO: Should it be based on whether the error.log file exists?
         log.debug('Finding containers with errors...')
         error_containers = find_error_containers(container_type, parent)
+        error_count = len(error_containers)
+
+        # Set the resolve paths
+        set_resolver_paths(error_containers, gear_context.client)
 
         # Set the status for the containers
         log.info('Resolving status for invalid containers...')
@@ -271,6 +352,17 @@ def main():
                                       gear_context,
                                       gear_context.config.get('filename'))
         log.info('Wrote error report with filename {}'.format(filename))
+
+        # Update analysis label
+        timestamp = datetime.datetime.utcnow()
+        analysis_label = 'ERROR_REPORT_COUNT_{}_AT_{}'.format(error_count, timestamp)
+        log.info('Updating label of analysis={} to {}'.format(analysis.id, analysis_label))
+
+        # TODO: Remove this when the sdk lets me do this
+        update_analysis_label(parent.container_type, parent.id, analysis.id,
+                              analysis_label,
+                              gear_context.client._fw.api_client.configuration.api_key['Authorization'],
+                              gear_context.client._fw.api_client.configuration.host)
 
 
 if __name__ == '__main__':
