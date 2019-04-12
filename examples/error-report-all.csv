@@ -1,0 +1,9 @@
+path,error,type,resolved,label,_id
+harsha/Testdata/ex4374/bar,'bar' does not match 'ses-[0-9]+',session,False,bar,5c9a9daefa0593002ddcebe9
+harsha/Testdata/ex4374/bar,'info.Harsha' is required,session,False,bar,5c9a9daefa0593002ddcebe9
+,session 09823-Screening missing from flywheel,session,False,,
+,session 09809-Week 4 missing from flywheel,session,False,,
+harsha/Testdata/02/01,session in flywheel not present in transfer log,session,False,01,5cafe2a6d66cd0b0acb0670e
+harsha/Testdata/ex4374/bar,session in flywheel not present in transfer log,session,False,bar,5c9a9daefa0593002ddcebe9
+harsha/Testdata/ex1/baz,session in flywheel not present in transfer log,session,False,baz,5c9a9dacfa05930026dceb8b
+harsha/Testdata/ex1/foo,session in flywheel not present in transfer log,session,False,foo,5c9a9dadfa05930026dceb8c
