@@ -6,6 +6,16 @@
 	"inputs": {
 		"api-key": {
 			"base": "api-key"
+		},
+		"transfer_log": {
+			"base": "file",
+			"description": "A transfer log file",
+			"type": {
+				"enum": [
+					"tabular data"
+				]
+			},
+			"optional": true
 		}
 	},
 	"config": {
