@@ -327,19 +327,6 @@ def main():
         )
         parent = gear_context.client.get_container(analysis.parent['id'])
 
-        # If a transfer log is given, and the parent is a project, validate the
-        # the two
-        if (parent.container_type == 'project' and
-            gear_context.get_input_path('transfer_log')):
-            log.info('Validating project against transfer_log...')
-            transfer_log_contents = transfer_log.read_transfer_log(
-                gear_context.get_input_path('transfer_log')
-            )
-            transfer_errors = transfer_log.validate_project_against_transfer_log(
-                parent,
-                transfer_log_contents
-            )
-
         # Get all containers
         # TODO: Should it be based on whether the error.log file exists?
         log.debug('Finding containers with errors...')
@@ -353,6 +340,16 @@ def main():
         # TODO: Figure out the validator stuff, maybe have our validation be a
         # pip module?
         errors = get_errors(error_containers, gear_context.client)
+
+        # If a transfer log is given, and the parent is a project, validate the
+        # the two
+        transfer_log_path = gear_context.get_input_path('transfer_log')
+        if parent.container_type == 'project' and transfer_log_path:
+            log.info('Validating project against transfer_log...')
+            transfer_errors = transfer_log.validate_transfer_log(parent,
+                                                                 transfer_log_path)
+            errors += transfer_errors
+
         error_count = len(errors)
 
         log.info('Writing error report')
