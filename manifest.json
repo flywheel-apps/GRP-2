@@ -10,12 +10,12 @@
 		"transfer_log": {
 			"base": "file",
 			"description": "A transfer log file",
+			"optional": true,
 			"type": {
 				"enum": [
 					"tabular data"
 				]
-			},
-			"optional": true
+			}
 		}
 	},
 	"config": {
@@ -25,7 +25,7 @@
 			"type": "string"
 		},
 		"file_type": {
-			"default": "json",
+			"default": "csv",
 			"description": "File Type of report (json or csv)",
 			"type": "string"
 		},

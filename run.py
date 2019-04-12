@@ -346,7 +346,8 @@ def main():
         transfer_log_path = gear_context.get_input_path('transfer_log')
         if parent.container_type == 'project' and transfer_log_path:
             log.info('Validating project against transfer_log...')
-            transfer_errors = transfer_log.validate_transfer_log(parent,
+            transfer_errors = transfer_log.validate_transfer_log(gear_context.client,
+                                                                 parent,
                                                                  transfer_log_path)
             errors += transfer_errors
 

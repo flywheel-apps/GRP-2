@@ -1,11 +1,12 @@
 import csv
 import xlrd
 import utils
+import os
 
 
-def create_missing_session_error(session_log):
+def create_missing_session_error(session_key):
     return {
-        'error': 'session {}-{} missing from flywheel'.format(session_log['Subject'], session_log['Timepoint']),
+        'error': 'session {}-{} missing from flywheel'.format(session_key[0], session_key[1]),
         'path': None,
         'type': 'session',
         'resolved': False,
@@ -14,7 +15,7 @@ def create_missing_session_error(session_log):
     }
 
 
-def create_unexpected_session_error(session_log, session, client):
+def create_unexpected_session_error(session, client):
     return {
         'error': 'session in flywheel not present in transfer log',
         'path': utils.get_resolver_path(client, session),
@@ -59,17 +60,17 @@ def validate_transfer_log(client, project, transfer_log_path):
         list: a list of error report entries
     """
     transfer_log = read_transfer_log(transfer_log_path)
-    missing_sessions, unexpected_sessions = validate_project_against_transfer_log(
+    missing_sessions_keys, unexpected_sessions_dict = validate_project_against_transfer_log(
         project,
         transfer_log
     )
 
     errors = []
 
-    for log in missing_sessions:
-        errors.append(create_missing_session_error(log))
-    for log, session in unexpected_sessions.items():
-        errors.append(create_unexpected_session_error(log, session, client))
+    for key in missing_sessions_keys:
+        errors.append(create_missing_session_error(key))
+    for key, session in unexpected_sessions_dict.items():
+        errors.append(create_unexpected_session_error(session, client))
 
     return errors
 
@@ -84,14 +85,15 @@ def validate_project_against_transfer_log(project, transfer_log):
         transfer_log (list): List of dictionaries, each dictionary is a sesson
 
     Returns:
-        list: A list of errors to append to the report
+        tuple: A list of missing session keys and a dictionary of unexpected
+            session keys to the corresponding session
     """
     sessions = {key(session): session for session in project.sessions()}
-    session_logs= [key_from_log(session_log) for session_log in transfer_log]
+    session_keys = [key_from_log(session_log) for session_log in transfer_log]
 
     missing_sessions = []
 
-    for session_key in session_logs:
+    for session_key in session_keys:
         if not sessions.get(session_key):
             missing_sessions.append(session_key)
         else:
@@ -118,10 +120,10 @@ def read_transfer_log(transfer_log_path):
         keys = None
         for row in sh.get_rows():
             if keys is None:
-                keys = row
+                keys = [cell.value for cell in row]
             else:
                 transfer_log.append({
-                    keys[i]: row[i] for
+                    keys[i]: row[i].value for
                     i in range(len(keys))
                 })
     elif extension == '.csv':
