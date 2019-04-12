@@ -2,14 +2,16 @@
 
 import csv
 import datetime
+import copy
 import flywheel
 import json
 import logging
 import jsonschema
 
-
+ERROR_LOG_FILENAME = 'error.log.json'
 CSV_HEADERS = [
     'path',
+    'error',
     'type',
     'resolved',
     'label',
@@ -198,6 +200,7 @@ def dictionary_lookup(field, dictionary):
 
     Returns:
         object: the value stored in the dictionary, None if it was not found
+        bool: Whether or not the field was found
     """
     d = dictionary
     for part in field.split('.'):
@@ -205,81 +208,109 @@ def dictionary_lookup(field, dictionary):
             if part in d:
                 d = d[part]
             else:
-                return None
+                return None, False
         elif isinstanced(d, list) and part.isdigit():
             if int(part) < len(d):
                 d = d[int(part)]
             else:
-                return None
+                return None, False
         else:
-            return None
-    return d
+            return None, False
+    return d, True
 
 
-def validate(instance, schema):
+def validate(container, error):
     """Wraps jsonschema.validate so that it returns a boolean instead of
     raising an Error
 
     Args:
-        instance (object): The instance to validate
-        schema (dict): A valid json schema
+        container (dict): The container to validate
+        error (dict): An error with schema and item fields
 
     Returns:
-        bool: Wether or the instance satisfies the schema
+        bool|str: True if valid or a message of the validation error
     """
+    schema = error.get('schema')
+    item = error.get('item')
+    value, found_value = dictionary_lookup(item, container)
+    field_required = schema.pop('required', False)
+
+    if found_value is False:
+        if field_required:
+            return '\'{}\' is required'.format(item)
+        else:
+            return True
     try:
-        jsonschema.validate(instance, schema)
+        jsonschema.validate(value, schema)
         return True
-    except jsonschema.ValidationError:
-        return False
+    except jsonschema.ValidationError as e:
+        return e.message
 
 
-def validate_container(error_log, container):
+def get_container_errors(error_log, container, container_dictionary):
     """Uses parameters given in the error log to validate the container
 
     Args:
         error_log (list): list of error objects
-        container (Container): The container to validate
+        container (dict): The container to validate
+        container_dictionary (dict): The error container dictionary
 
     Returns:
-        bool: Whether the container is valid
+        list: A list of error dictionaries
     """
+    error_dictionaries = []
     for error in error_log:
-        schema = error.get('schema')
-        item = error.get('item')
-        value = dictionary_lookup(item, container.to_dict())
-        if schema.pop('required', None) and value is None:
-            return False
-        if not validate(value, schema):
-            return False
-    return True
+        error_dictionary = copy.deepcopy(container_dictionary)
+        error_status = validate(container, error)
+        if error_status is True:
+            error_dictionary['resolved'] = True
+        else:
+            error_dictionary['resolved'] = False
+            error_dictionary['error'] = error_status
+        error_dictionaries.append(error_dictionary)
+    return error_dictionaries
 
 
-def set_resolved_status(error_containers, client):
-    """Sets the resolved boolean on the container dictionary in error the
-    containers
+def get_errors(error_containers, client):
+    """Generate a list of errors of all the containers and set the resolution
+    and error message for each, if the error.log file DNE, we create a single
+    error for the container without a message and resolved set to True
 
     Args:
         error_containers (list): list of container dictionaries
         client (Client): An api client
+    Returns:
+        list: A list of errors (many to one container)
     """
+    errors = []
     for container_dictionary in error_containers:
         container = client.get_container(container_dictionary['_id'])
-        if container.get_file('error.log'):
-            error_log = json.loads(container.read_file('error.log'))
-            resolved = validate_container(error_log, container)
+        if container.get_file(ERROR_LOG_FILENAME):
+            error_log = json.loads(container.read_file(ERROR_LOG_FILENAME))
+            container_errors = get_container_errors(error_log,
+                                                    container.to_dict(),
+                                                    container_dictionary)
+            resolved = all([
+                container_error['resolved'] for
+                container_error in
+                container_errors
+            ])
             if resolved:
-                log.info('Deleting error.log for {}={}...'.format(
+                log.info('Deleting {} for {}={}...'.format(
+                    ERROR_LOG_FILENAME,
                     container.container_type,
                     container.id
                 ))
-                container.delete_file('error.log')
+                container.delete_file(ERROR_LOG_FILENAME)
                 container.delete_tag('error')
+            errors += container_errors
         else:
             # If the error file isn't there, assume it was resolved
             resolved = True
             container.delete_tag('error')
-        container_dictionary['resolved'] = resolved
+            container_dictionary['resolved'] = True
+            errors.append(container_dictionary)
+    return errors
 
 
 def update_analysis_label(parent_type, parent_id, analysis_id, analysis_label,
@@ -335,7 +366,6 @@ def main():
         # TODO: Should it be based on whether the error.log file exists?
         log.debug('Finding containers with errors...')
         error_containers = find_error_containers(container_type, parent)
-        error_count = len(error_containers)
 
         # Set the resolve paths
         set_resolver_paths(error_containers, gear_context.client)
@@ -344,10 +374,11 @@ def main():
         log.info('Resolving status for invalid containers...')
         # TODO: Figure out the validator stuff, maybe have our validation be a
         # pip module?
-        set_resolved_status(error_containers, gear_context.client)
+        errors = get_errors(error_containers, gear_context.client)
+        error_count = len(errors)
 
         log.info('Writing error report')
-        filename = create_output_file(container_type, error_containers,
+        filename = create_output_file(container_type, errors,
                                       gear_context.config.get('file_type'),
                                       gear_context,
                                       gear_context.config.get('filename'))
