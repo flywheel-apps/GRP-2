@@ -7,7 +7,9 @@ import flywheel
 import json
 import logging
 import jsonschema
-import xlrd
+
+import transfer_log
+import utils
 
 ERROR_LOG_FILENAME = 'error.log.json'
 CSV_HEADERS = [
@@ -20,44 +22,6 @@ CSV_HEADERS = [
 ]
 
 log = logging.getLogger('grp-2')
-
-
-def get_resolver_path(client, container):
-    """Generates the resolveer path for a container
-
-    Args:
-        client (Client): Flywheel Api client
-        container (Container): A flywheel container
-
-    Returns:
-        str: A human-readable resolver path that can be used to find the
-            container
-    """
-    resolver_path = []
-    for parent_type in ['group', 'project', 'subject', 'session']:
-        parent_id = container.parents.get(parent_type)
-        if parent_id:
-            if parent_type == 'group':
-                path_part = client.get(parent_id).id
-            else:
-                path_part = client.get(parent_id).label
-            resolver_path.append(path_part)
-        else:
-            break
-    resolver_path.append(container.label)
-    return '/'.join(resolver_path)
-
-
-def set_resolver_paths(error_containers, client):
-    """Sets the resolver path for the list of error containers
-
-    Args:
-        error_containers (list): list of container dictionaries
-        client (Client): Flywheel Api client
-    """
-    for error_container in error_containers:
-        container = client.get(error_container['_id'])
-        error_container['path'] = get_resolver_path(client, container)
 
 
 def collect_containers(finder, container_type, collect_acquisitions=False,
@@ -352,77 +316,6 @@ def update_analysis_label(parent_type, parent_id, analysis_id, analysis_label,
     return raw_response.json()
 
 
-def validate_project_against_transfer_log(project, transfer_log):
-    """Ensures that a session that matches each row of the transfer log exists
-    in the project and warns of any sessions that are not reflected in the
-    transfer log
-
-    Args:
-        project (Project): Flywheel project object
-        transfer_log (list): List of dictionaries, each dictionary is a sesson
-
-    Returns:
-        tuple: Two lists, one of transfer log session that don't exist and one
-            of project session not in the transfer log
-    """
-
-    def simplify(timestamp):
-        """Returns the datetime as a formatted string"""
-        return timestamp.strftime("%b %d, %Y")
-
-    def key(session):
-        """Returns a tuple to be used as keys from a session"""
-        return (
-            session.subject.code,
-            session.label,
-            "MR - {}".format(simplify(session.timestamp))
-        )
-    def key_from_log(session_log):
-        """Returns a key as above from a transfer log entry"""
-        return (
-            session_log['Subject'],
-            session_log['Timepoint'],
-            session_log['Modality - Exam Date']
-        )
-
-    sessions = {key(session): session for session in project.sessions()}
-    session_logs= [key_from_log(session_log) for session_log in transfer_log]
-
-    missing_sessions = []
-
-    for session_key in session_logs:
-        if not sessions.get(session_key):
-            missing_sessions.append(session_key)
-        else:
-            sessions.pop(session_key)
-
-    return missing_sessions, list(sessions.keys())
-
-
-def read_transfer_log(transfer_log_path):
-    extension = os.path.splitext(transfer_log_path)[1]
-    if extension == '.xlsx':
-        wb = xlrd.open_workbook(transfer_log_path)
-        sh = wb.sheet_by_index(0)
-        transfer_log = []
-        keys = None
-        for row in sh.get_rows():
-            if keys is None:
-                keys = row
-            else:
-                transfer_log.append({
-                    keys[i]: row[i] for
-                    i in range(len(keys))
-                })
-    elif extension == '.csv':
-        with open(transfer_log_path, 'r') as fp:
-            csv_reader = csv.DictReader(fp)
-            transfer_log = [row for row in csv_reader]
-    else:
-        raise Exception('Invalid transfer log filetype %s', extension)
-    return transfer_log
-
-
 def main():
     with flywheel.GearContext() as gear_context:
         gear_context.init_logging()
@@ -439,9 +332,13 @@ def main():
         if (parent.container_type == 'project' and
             gear_context.get_input_path('transfer_log')):
             log.info('Validating project against transfer_log...')
-            transfer_log = read_transfer_log(gear_context.get_input_path('transfer_log'))
-            missing_sessions, unexpected_sessions = \
-                validate_project_against_transfer_log(parent, transfer_log)
+            transfer_log_contents = transfer_log.read_transfer_log(
+                gear_context.get_input_path('transfer_log')
+            )
+            transfer_errors = transfer_log.validate_project_against_transfer_log(
+                parent,
+                transfer_log_contents
+            )
 
         # Get all containers
         # TODO: Should it be based on whether the error.log file exists?
@@ -449,7 +346,7 @@ def main():
         error_containers = find_error_containers(container_type, parent)
 
         # Set the resolve paths
-        set_resolver_paths(error_containers, gear_context.client)
+        utils.set_resolver_paths(error_containers, gear_context.client)
 
         # Set the status for the containers
         log.info('Resolving status for invalid containers...')

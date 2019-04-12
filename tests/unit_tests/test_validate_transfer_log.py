@@ -2,7 +2,7 @@ import datetime
 import pytest
 import mock
 
-import run
+import transfer_log
 
 DATE = datetime.datetime.now()
 
@@ -29,9 +29,9 @@ def format_transfer_log(subject_code, session_label):
 
 def test_validate_project():
     project = MockProject(1)
-    transfer_log = [format_transfer_log('0', '0')]
+    transfer_log_contents = [format_transfer_log('0', '0')]
     missing_sessions, unexpected_sessions =  \
-        run.validate_project_against_transfer_log(project, transfer_log)
+        transfer_log.validate_project_against_transfer_log(project, transfer_log_contents)
 
     assert len(missing_sessions) == 0
     assert len(unexpected_sessions) == 0
@@ -39,25 +39,25 @@ def test_validate_project():
 
 def test_validate_project_with_missing_sessions():
     project = MockProject(1)
-    transfer_log = [
+    transfer_log_contents = [
         format_transfer_log('0', '0'),
         format_transfer_log('1', '1')
     ]
     missing_sessions, unexpected_sessions =  \
-        run.validate_project_against_transfer_log(project, transfer_log)
+        transfer_log.validate_project_against_transfer_log(project, transfer_log_contents)
 
     assert len(missing_sessions) == 1
-    assert set(missing_sessions[0]) == set(transfer_log[1].values())
+    assert set(missing_sessions[0]) == set(transfer_log_contents[1].values())
     assert len(unexpected_sessions) == 0
 
 
 def test_validate_project_with_unexpected_sessions():
     project = MockProject(2)
-    transfer_log = [format_transfer_log('0','0')]
+    transfer_log_contents = [format_transfer_log('0','0')]
     missing_sessions, unexpected_sessions =  \
-        run.validate_project_against_transfer_log(project, transfer_log)
+        transfer_log.validate_project_against_transfer_log(project, transfer_log_contents)
 
     assert len(missing_sessions) == 0
     assert len(unexpected_sessions) == 1
-    assert set(unexpected_sessions[0]) == set(format_transfer_log('1','1').values())
+    assert set(list(unexpected_sessions.keys())[0]) == set(format_transfer_log('1','1').values())
 

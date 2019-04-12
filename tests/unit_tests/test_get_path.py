@@ -1,7 +1,7 @@
 import flywheel
 import pytest
 import mock
-import run
+import utils
 
 
 class MockContainer(object):
@@ -36,7 +36,7 @@ def test_set_path_for_project():
     project = MockContainer('project')
     MockParent.count = 0
 
-    resolve_path = run.get_resolver_path(client, project)
+    resolve_path = utils.get_resolver_path(client, project)
     assert resolve_path == 'group_id/project_label'
 
 
@@ -45,7 +45,7 @@ def test_set_path_for_subject():
     subject = MockContainer('subject')
     MockParent.count = 0
 
-    resolve_path = run.get_resolver_path(client, subject)
+    resolve_path = utils.get_resolver_path(client, subject)
     assert resolve_path == 'group_id/project_label/subject_label'
 
 
@@ -54,7 +54,7 @@ def test_set_path_for_session():
     session = MockContainer('session')
     MockParent.count = 0
 
-    resolve_path = run.get_resolver_path(client, session)
+    resolve_path = utils.get_resolver_path(client, session)
     assert resolve_path == 'group_id/project_label/subject_label/session_label'
 
 
@@ -63,5 +63,5 @@ def test_set_path_for_acquisition():
     acquisition = MockContainer('acquisition')
     MockParent.count = 0
 
-    resolve_path = run.get_resolver_path(client, acquisition)
+    resolve_path = utils.get_resolver_path(client, acquisition)
     assert resolve_path == 'group_id/project_label/subject_label/session_label/acquisition_label'
