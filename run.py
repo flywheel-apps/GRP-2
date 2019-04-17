@@ -230,6 +230,8 @@ def validate(container, error):
     Returns:
         bool|str: True if valid or a message of the validation error
     """
+    if not error.get('revalidate'):
+        return error.get('error_message', 'Skipping revalidation')
     schema = error.get('schema')
     item = error.get('item')
     value, found_value = dictionary_lookup(item, container)
