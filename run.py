@@ -391,7 +391,7 @@ def main():
 
         # Update analysis label
         timestamp = datetime.datetime.utcnow()
-        analysis_label = 'ERROR_REPORT_COUNT_{}_AT_{}'.format(error_count, timestamp)
+        analysis_label = 'Metadata Error Report: COUNT={} [{}]'.format(error_count, timestamp)
         log.info('Updating label of analysis={} to {}'.format(analysis.id, analysis_label))
 
         # TODO: Remove this when the sdk lets me do this
@@ -403,4 +403,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-

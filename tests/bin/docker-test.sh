@@ -43,9 +43,9 @@ main() {
     fi
 
     docker run -it --rm \
-        --volume "$(pwd):/src" \
+        --volume "$(pwd):/flywheel/v0" \
         "${DOCKER_IMAGE}" \
-        bash /src/tests/bin/tests.sh "$@"
+        bash /flywheel/v0/tests/bin/tests.sh "$@"
 }
 
 main "$@"
