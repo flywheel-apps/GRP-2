@@ -2,7 +2,7 @@
 	"name": "metadata-error-report",
 	"label": "Error Report Generator",
 	"description": "A validation error report generator and resolver",
-	"version": "0.0.8",
+	"version": "1.0.0",
 	"inputs": {
 		"api-key": {
 			"base": "api-key"
@@ -43,8 +43,7 @@
 		"dicom-image": "flywheel/metadata-error-report-grp-2:0.0.1",
 		"gear-builder": {
 			"category": "analysis",
-			"container": "3cb15bb732c454d98a77ea8590788afea59b8af24f0b1118ab00251905b392e2",
-			"image": "gear-builder-qzqwxzdebf-20190328170626"
+			"image": "flywheel/metadata-error-report"
 		}
 	}
 }

@@ -13,8 +13,8 @@ The config options are:
 The gear finds the containers base on the `error` tag, but will re-validate the containers status using the contents of the error.log file.
 For the gear to work, a validation gear must set an `error` tag and upload an `error.log` file that follows certain specifications.
 
-#### error.log
-The `error.log` file should be a json file. The format of it should be
+#### Error Log
+The error log file should be a json file ending in `error.log.json`. The format of it should be
 ```
 [
 	{

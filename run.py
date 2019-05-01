@@ -8,7 +8,7 @@ import json
 import logging
 import jsonschema
 
-ERROR_LOG_FILENAME = 'error.log.json'
+ERROR_LOG_FILENAME_SUFFIX = 'error.log.json'
 CSV_HEADERS = [
     'path',
     'error',
@@ -287,25 +287,28 @@ def get_errors(error_containers, client):
     errors = []
     for container_dictionary in error_containers:
         container = client.get_container(container_dictionary['_id'])
-        if container.get_file(ERROR_LOG_FILENAME):
-            error_log = json.loads(container.read_file(ERROR_LOG_FILENAME))
-            container_errors = get_container_errors(error_log,
-                                                    container.to_dict(),
-                                                    container_dictionary)
-            resolved = all([
-                container_error['resolved'] for
-                container_error in
-                container_errors
-            ])
-            if resolved:
-                log.info('Deleting {} for {}={}...'.format(
-                    ERROR_LOG_FILENAME,
-                    container.container_type,
-                    container.id
-                ))
-                container.delete_file(ERROR_LOG_FILENAME)
-                container.delete_tag('error')
-            errors += container_errors
+        error_log_filenames = [file_.name for file_ in container.files if
+                               file_.name.endswith(ERROR_LOG_FILENAME_SUFFIX)]
+        if error_log_filenames:
+            for error_log_filename in error_log_filenames:
+                error_log = json.loads(container.read_file(error_log_filename))
+                container_errors = get_container_errors(error_log,
+                                                        container.to_dict(),
+                                                        container_dictionary)
+                resolved = all([
+                    container_error['resolved'] for
+                    container_error in
+                    container_errors
+                ])
+                if resolved:
+                    log.info('Deleting {} for {}={}...'.format(
+                        error_log_filename,
+                        container.container_type,
+                        container.id
+                    ))
+                    container.delete_file(error_log_filename)
+                    container.delete_tag('error')
+                errors += container_errors
         else:
             # If the error file isn't there, assume it was resolved
             resolved = True
