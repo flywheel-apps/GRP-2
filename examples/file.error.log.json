@@ -1,0 +1,16 @@
+[
+	{
+		"schema": {
+			"type": "string",
+			"pattern": "ses-[0-9]+"
+		},
+		"item": "label"
+	},
+	{
+		"schema": {
+			"type": "string",
+			"required": true
+		},
+		"item": "info.Harsha"
+	}
+]

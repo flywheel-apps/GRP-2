@@ -19,6 +19,7 @@ CSV_HEADERS = [
 ]
 
 log = logging.getLogger('grp-2')
+log.setLevel('INFO')
 
 
 def get_resolver_path(client, container):
@@ -76,15 +77,20 @@ def collect_containers(finder, container_type, collect_acquisitions=False,
         list: A list of dictionaries with the container id, label, and type set
     """
     error_containers = []
+    log.debug('Inside collect function, collect acqs %s', collect_acquisitions)
+    log.debug('Container type %s', container_type)
     for container in finder.find('tags=error'):
+        log.debug('Checking container %s', container.label)
         if container_type != 'session' or not skip_sessions:
             error_containers.append({
                 '_id': container.id,
                 'label': container.label,
                 'type': container_type
             })
-        if collect_acquisitions:
-            for acquisition in container.acquisitions.find('tags=error'):
+    if collect_acquisitions:
+        for session in finder.find():
+            log.debug('Collecting acquisitions for session %s', session.label)
+            for acquisition in session.acquisitions.find('tags=error'):
                 error_containers.append({
                     '_id': acquisition.id,
                     'label': acquisition.label,
@@ -140,7 +146,9 @@ def find_error_containers(container_type, parent):
                              parent.container_type)
 
         collect_acquisitions = container_type == 'all' or container_type == 'acquisition'
+        log.debug('Collecting acquisitions? %s', collect_acquisitions)
         skip_sessions = container_type == 'acquisition'
+        log.debug('Skip sessions? %s', skip_sessions)
         error_containers += collect_containers(parent.sessions, 'session',
                                                collect_acquisitions=collect_acquisitions,
                                                skip_sessions=skip_sessions)
@@ -203,6 +211,8 @@ def dictionary_lookup(field, dictionary):
         bool: Whether or not the field was found
     """
     d = dictionary
+    if field is None:
+        return None, False
     for part in field.split('.'):
         if isinstance(d, dict):
             if part in d:
@@ -232,6 +242,8 @@ def validate(container, error):
     """
     if not error.get('revalidate'):
         return error.get('error_message', 'Skipping revalidation')
+    if error.get('error_type') == 'not':
+        return error.get('error_message', 'Error has no schema')
     schema = error.get('schema')
     item = error.get('item')
     value, found_value = dictionary_lookup(item, container)
@@ -369,8 +381,9 @@ def main():
 
         # Get all containers
         # TODO: Should it be based on whether the error.log file exists?
-        log.debug('Finding containers with errors...')
+        log.info('Finding containers with errors...')
         error_containers = find_error_containers(container_type, parent)
+        log.debug('Found %d conainers', len(error_containers))
 
         # Set the resolve paths
         set_resolver_paths(error_containers, gear_context.client)
