@@ -31,7 +31,7 @@ class MockClient(object):
         return MockParent()
 
 
-def test_set_path_for_project():
+def test_get_path_for_project():
     client = MockClient()
     project = MockContainer('project')
     MockParent.count = 0
@@ -40,7 +40,7 @@ def test_set_path_for_project():
     assert resolve_path == 'group_id/project_label'
 
 
-def test_set_path_for_subject():
+def test_get_path_for_subject():
     client = MockClient()
     subject = MockContainer('subject')
     MockParent.count = 0
@@ -49,7 +49,7 @@ def test_set_path_for_subject():
     assert resolve_path == 'group_id/project_label/subject_label'
 
 
-def test_set_path_for_session():
+def test_get_path_for_session():
     client = MockClient()
     session = MockContainer('session')
     MockParent.count = 0
@@ -58,7 +58,7 @@ def test_set_path_for_session():
     assert resolve_path == 'group_id/project_label/subject_label/session_label'
 
 
-def test_set_path_for_acquisition():
+def test_get_path_for_acquisition():
     client = MockClient()
     acquisition = MockContainer('acquisition')
     MockParent.count = 0

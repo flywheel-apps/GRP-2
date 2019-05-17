@@ -11,11 +11,11 @@ import jsonschema
 ERROR_LOG_FILENAME_SUFFIX = 'error.log.json'
 CSV_HEADERS = [
     'path',
+    'url',
     'error',
-    'type',
     'resolved',
-    'label',
-    '_id'
+    '_id',
+    'type'
 ]
 
 log = logging.getLogger('grp-2')
@@ -48,8 +48,34 @@ def get_resolver_path(client, container):
     return '/'.join(resolver_path)
 
 
-def set_resolver_paths(error_containers, client):
-    """Sets the resolver path for the list of error containers
+def get_uri(client, container):
+    """Generates the uri for a container. If its a session or acquisition,
+    the uri will be to the session on the project session tab. Otherwise, it
+    will be to the project description page.
+
+    Args:
+        client (Client): Flywheel Api client
+        container (Container): A flywheel container
+
+    Returns:
+        str: A uri that can be used to find the
+            container
+    """
+    first = ':'.join(client.get_config().site.api_url.split(':')[:-1])
+    uri = None
+    if container.container_type == 'project':
+        uri = first + '/#/projects/{}'.format(container.id)
+    elif container.container_type == 'session':
+        uri = first + '/#/projects/{}/sessions/{}?tab=data'.format(container.project, container.id)
+    elif container.container_type == 'acquisition':
+        uri = first + '/#/projects/{}/sessions/{}?tab=data'.format(container.parents.project, container.parents.session)
+    else:
+        uri = first + '/#/projects/{}'.format(container.parents.project)
+    return uri
+
+
+def add_additional_info(error_containers, client):
+    """Adds additional info to container entries such as resolver path and uri
 
     Args:
         error_containers (list): list of container dictionaries
@@ -58,12 +84,13 @@ def set_resolver_paths(error_containers, client):
     for error_container in error_containers:
         container = client.get(error_container['_id'])
         error_container['path'] = get_resolver_path(client, container)
+        error_container['url'] = get_uri(client, container)
 
 
 def collect_containers(finder, container_type, collect_acquisitions=False,
                        skip_sessions=False):
     """Iterates over finder for containers with tags=error filter, and returns
-    a list of dictionaries with the container id, label, and type
+    a list of dictionaries with the container id and type
 
     Args:
         finder (Finder): A flywheel sdk finder
@@ -74,7 +101,7 @@ def collect_containers(finder, container_type, collect_acquisitions=False,
             collecting acquisitions
 
     Returns:
-        list: A list of dictionaries with the container id, label, and type set
+        list: A list of dictionaries with the container id and type set
     """
     error_containers = []
     log.debug('Inside collect function, collect acqs %s', collect_acquisitions)
@@ -84,7 +111,6 @@ def collect_containers(finder, container_type, collect_acquisitions=False,
         if container_type != 'session' or not skip_sessions:
             error_containers.append({
                 '_id': container.id,
-                'label': container.label,
                 'type': container_type
             })
     if collect_acquisitions:
@@ -93,7 +119,6 @@ def collect_containers(finder, container_type, collect_acquisitions=False,
             for acquisition in session.acquisitions.find('tags=error'):
                 error_containers.append({
                     '_id': acquisition.id,
-                    'label': acquisition.label,
                     'type': 'acquisition'
                 })
     return error_containers
@@ -111,7 +136,7 @@ def find_error_containers(container_type, parent):
             be
 
     Returns:
-        list: A list of containers (_id, label, and type) that are tagged as
+        list: A list of containers (_id and type) that are tagged as
             error
     """
     error_containers = []
@@ -164,13 +189,13 @@ def find_error_containers(container_type, parent):
     return error_containers
 
 
-def create_output_file(container_type, error_containers, file_type,
-                       gear_context, output_filename=None):
+def create_output_file(container_label, error_containers, file_type,
+                       gear_context, timestamp, output_filename=None):
     """Creates the output file from a set of error containers, the file type
     is determined from the config value
 
     Args:
-        containers (str): The container type to describe in the output file
+        container_label (str): The label of root container
         error_containers (list): list of containers that were tagged
         file_type (str): The file type to format the output into
         gear_context (GearContext): the gear context so that we can write out
@@ -181,8 +206,9 @@ def create_output_file(container_type, error_containers, file_type,
         str: The filename that was used to write the report as
     """
     file_ext = 'csv' if file_type == 'csv' else 'json'
-    output_filename = output_filename or 'error-report-{}.{}'.format(
-        container_type,
+    output_filename = output_filename or '{}-{}.{}'.format(
+        container_label,
+        timestamp,
         file_ext
     )
     with gear_context.open_output(output_filename, 'w') as output_file:
@@ -386,7 +412,7 @@ def main():
         log.debug('Found %d conainers', len(error_containers))
 
         # Set the resolve paths
-        set_resolver_paths(error_containers, gear_context.client)
+        add_additional_info(error_containers, gear_context.client)
 
         # Set the status for the containers
         log.info('Resolving status for invalid containers...')
@@ -396,14 +422,14 @@ def main():
         error_count = len(errors)
 
         log.info('Writing error report')
-        filename = create_output_file(container_type, errors,
+        timestamp = datetime.datetime.utcnow()
+        filename = create_output_file(parent.label, errors,
                                       gear_context.config.get('file_type'),
-                                      gear_context,
+                                      gear_context, timestamp,
                                       gear_context.config.get('filename'))
         log.info('Wrote error report with filename {}'.format(filename))
 
         # Update analysis label
-        timestamp = datetime.datetime.utcnow()
         analysis_label = 'Metadata Error Report: COUNT={} [{}]'.format(error_count, timestamp)
         log.info('Updating label of analysis={} to {}'.format(analysis.id, analysis_label))
 

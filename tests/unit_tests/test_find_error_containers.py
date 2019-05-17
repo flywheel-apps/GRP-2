@@ -30,17 +30,14 @@ def test_find_all_for_project():
     expected_value = [
         {
             '_id': 'subject_id',
-            'label': 'subject_label',
             'type': 'subject'
         },
         {
             '_id': 'session_id',
-            'label': 'session_label',
             'type': 'session'
         },
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
@@ -53,7 +50,6 @@ def test_find_subject_project():
     expected_value = [
         {
             '_id': 'subject_id',
-            'label': 'subject_label',
             'type': 'subject'
         }
     ]
@@ -66,7 +62,6 @@ def test_find_session_project():
     expected_value = [
         {
             '_id': 'session_id',
-            'label': 'session_label',
             'type': 'session'
         }
     ]
@@ -79,7 +74,6 @@ def test_find_acquisition_project():
     expected_value = [
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
@@ -92,12 +86,10 @@ def test_find_all_subject():
     expected_value = [
         {
             '_id': 'session_id',
-            'label': 'session_label',
             'type': 'session'
         },
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
@@ -116,7 +108,6 @@ def test_find_session_subject():
     expected_value = [
         {
             '_id': 'session_id',
-            'label': 'session_label',
             'type': 'session'
         }
     ]
@@ -129,7 +120,6 @@ def test_find_acquisition_subject():
     expected_value = [
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
@@ -142,7 +132,6 @@ def test_find_all_session():
     expected_value = [
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
@@ -167,7 +156,6 @@ def test_find_acquisition_session():
     expected_value = [
         {
             '_id': 'acquisition_id',
-            'label': 'acquisition_label',
             'type': 'acquisition'
         }
     ]
