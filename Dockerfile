@@ -6,9 +6,7 @@ COPY run.py requirements.txt manifest.json ./
 RUN pip install -r requirements.txt
 
 RUN chmod +x run.py
-CMD ["python run.py"]
 
 FROM base as testing
 COPY tests ./tests
 RUN pip install -r tests/requirements.txt
-

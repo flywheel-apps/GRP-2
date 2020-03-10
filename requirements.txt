@@ -1,2 +1,2 @@
-flywheel-sdk==6.1.0.dev2
-jsonschema
+flywheel-sdk~=11.0.0
+jsonschema~=3.2.0
