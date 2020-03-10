@@ -1,3 +1,5 @@
+[![CircleCI](https://circleci.com/gh/flywheel-apps/GRP-2.svg?style=svg)](https://circleci.com/gh/flywheel-apps/GRP-2)
+
 # Metadata Error Reporter
 An sdk gear that checks errors for resolution status and rolls it up into a report
 
