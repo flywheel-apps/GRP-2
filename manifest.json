@@ -8,11 +8,11 @@
   "license": "Other",
   "source": "https://github.com/flywheel-apps/GRP-2",
   "url": "",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "custom": {
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/metadata-error-report-grp-2:1.0.6"
+      "image": "flywheel/metadata-error-report-grp-2:1.0.7"
     },
     "flywheel": {
       "suite": "Metadata Import and Validation"
