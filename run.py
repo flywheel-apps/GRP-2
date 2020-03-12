@@ -245,7 +245,7 @@ def dictionary_lookup(field, dictionary):
                 d = d[part]
             else:
                 return None, False
-        elif isinstanced(d, list) and part.isdigit():
+        elif isinstance(d, list) and part.isdigit():
             if int(part) < len(d):
                 d = d[int(part)]
             else:
@@ -270,7 +270,7 @@ def validate(container, error):
         return error.get('error_message', 'Skipping revalidation')
     if error.get('error_type') == 'not':
         return error.get('error_message', 'Error has no schema')
-    schema = error.get('schema')
+    schema = error.get('schema', {})
     item = error.get('item')
     value, found_value = dictionary_lookup(item, container)
     field_required = schema.pop('required', False)
@@ -409,7 +409,7 @@ def main():
         # TODO: Should it be based on whether the error.log file exists?
         log.info('Finding containers with errors...')
         error_containers = find_error_containers(container_type, parent)
-        log.debug('Found %d conainers', len(error_containers))
+        log.debug('Found %d containers', len(error_containers))
 
         # Set the resolve paths
         add_additional_info(error_containers, gear_context.client)
