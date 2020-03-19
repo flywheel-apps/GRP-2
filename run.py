@@ -18,6 +18,7 @@ CSV_HEADERS = [
     'type'
 ]
 
+
 log = logging.getLogger('grp-2')
 log.setLevel('INFO')
 
@@ -266,6 +267,7 @@ def validate(container, error):
     Returns:
         bool|str: True if valid or a message of the validation error
     """
+    validation_output = True
     if not error.get('revalidate'):
         return error.get('error_message', 'Skipping revalidation')
     if error.get('error_type') == 'not':
@@ -277,22 +279,27 @@ def validate(container, error):
 
     if found_value is False:
         if field_required:
-            return '\'{}\' is required'.format(item)
+            validation_output = '\'{}\' is required'.format(item)
         else:
-            return True
+            log.warning('Could not find %s on file: %s. Please confirm metadata are not missing.', item,
+                        container.get('name'))
+        return validation_output
+
     try:
         jsonschema.validate(value, schema)
-        return True
+
     except jsonschema.ValidationError as e:
-        return e.message
+        validation_output = e.message
+
+    return validation_output
 
 
-def get_container_errors(error_log, container, container_dictionary):
+def get_container_errors(error_log, file_dict, container_dictionary):
     """Uses parameters given in the error log to validate the container
 
     Args:
         error_log (list): list of error objects
-        container (dict): The container to validate
+        file_dict (dict): The file metadata to validate
         container_dictionary (dict): The error container dictionary
 
     Returns:
@@ -301,7 +308,7 @@ def get_container_errors(error_log, container, container_dictionary):
     error_dictionaries = []
     for error in error_log:
         error_dictionary = copy.deepcopy(container_dictionary)
-        error_status = validate(container, error)
+        error_status = validate(file_dict, error)
         if error_status is True:
             error_dictionary['resolved'] = True
         else:
@@ -309,6 +316,24 @@ def get_container_errors(error_log, container, container_dictionary):
             error_dictionary['error'] = error_status
         error_dictionaries.append(error_dictionary)
     return error_dictionaries
+
+
+def get_error_origin_file_dict(container_dict, error_log_name):
+    """
+    Finds the file dictionary in container_dict['files'] matching the error_log_name without ERROR_LOG_FILENAME_SUFFIX.
+    Returns None if the a matching file dictionary is not present.
+
+    :param container_dict: dictionary representing a flywheel container
+    :param error_log_name: name of the error log file
+    :return: None or dict
+    """
+    file_dict = None
+    file_list = container_dict.get('files', [])
+    origin_file_name = error_log_name.rstrip(f'.{ERROR_LOG_FILENAME_SUFFIX}')
+    if file_list:
+        file_dict = next((file_dict for file_dict in file_list if file_dict['name'] == origin_file_name), None)
+
+    return file_dict
 
 
 def get_errors(error_containers, client):
@@ -329,10 +354,12 @@ def get_errors(error_containers, client):
                                file_.name.endswith(ERROR_LOG_FILENAME_SUFFIX)]
         if error_log_filenames:
             for error_log_filename in error_log_filenames:
+                origin_file_dict = get_error_origin_file_dict(container.to_dict(), error_log_filename)
                 error_log = json.loads(container.read_file(error_log_filename))
                 container_errors = get_container_errors(error_log,
-                                                        container.to_dict(),
+                                                        origin_file_dict,
                                                         container_dictionary)
+
                 resolved = all([
                     container_error['resolved'] for
                     container_error in
@@ -344,14 +371,14 @@ def get_errors(error_containers, client):
                         container.container_type,
                         container.id
                     ))
-                    container.delete_file(error_log_filename)
-                    container.delete_tag('error')
+                    #container.delete_file(error_log_filename)
+                    #container.delete_tag('error')
                 errors += container_errors
         else:
             # If the error file isn't there, assume it was resolved
             resolved = True
-            container.delete_tag('error')
-            container_dictionary['resolved'] = True
+            #container.delete_tag('error')
+            #container_dictionary['resolved'] = True
             errors.append(container_dictionary)
     return errors
 
