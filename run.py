@@ -371,14 +371,14 @@ def get_errors(error_containers, client):
                         container.container_type,
                         container.id
                     ))
-                    #container.delete_file(error_log_filename)
-                    #container.delete_tag('error')
+                    container.delete_file(error_log_filename)
+                    container.delete_tag('error')
                 errors += container_errors
         else:
             # If the error file isn't there, assume it was resolved
             resolved = True
-            #container.delete_tag('error')
-            #container_dictionary['resolved'] = True
+            container.delete_tag('error')
+            container_dictionary['resolved'] = True
             errors.append(container_dictionary)
     return errors
 
