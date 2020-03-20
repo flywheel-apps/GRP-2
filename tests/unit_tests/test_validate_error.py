@@ -1,3 +1,5 @@
+import logging
+
 import pytest
 import mock
 import run
@@ -76,7 +78,7 @@ def test_validate_exists_invalid():
     assert error_status == '1 is not of type \'string\''
 
 
-def test_validate_does_not_exists():
+def test_validate_does_not_exists(caplog):
     error = {
         'revalidate': True,
         'schema': {
@@ -85,9 +87,10 @@ def test_validate_does_not_exists():
         'item': 'label'
     }
     container = {}
-
-    error_status = run.validate(container, error)
-    assert error_status is True
+    with caplog.at_level(logging.WARNING):
+        error_status = run.validate(container, error)
+        assert error_status is True
+        assert any([message.endswith('Please confirm metadata are not missing.') for message in caplog.messages])
 
 
 def test_not_revalidate():
@@ -105,8 +108,7 @@ def test_not_revalidate_message():
         'revalidate': False,
         'error_message': 'Not enough images'
     }
-    container ={}
+    container = {}
 
     error_status = run.validate(container, error)
     assert error_status == 'Not enough images'
-
