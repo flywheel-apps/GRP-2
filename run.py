@@ -321,7 +321,7 @@ def get_container_errors(error_log, file_dict, container_dictionary):
 def get_error_origin_file_dict(container_dict, error_log_name):
     """
     Finds the file dictionary in container_dict['files'] matching the error_log_name without ERROR_LOG_FILENAME_SUFFIX.
-    Returns None if the a matching file dictionary is not present.
+    Returns None if a matching file dictionary is not present.
 
     :param container_dict: dictionary representing a flywheel container
     :param error_log_name: name of the error log file
