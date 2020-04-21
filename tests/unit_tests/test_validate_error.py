@@ -7,7 +7,7 @@ import mock
 import run
 
 
-DATA_ROOT = Path(__file__).parent.parent / 'data'
+DATA_ROOT = Path(__file__).parents[1] / 'data'
 
 
 def test_validate_required_exists_valid():
