@@ -265,33 +265,50 @@ def validate(container, error):
         error (dict): An error with schema and item fields
 
     Returns:
-        bool|str: True if valid or a message of the validation error
+        list: list of validation error messages (empty if none)
     """
-    validation_output = True
     if not error.get('revalidate'):
-        return error.get('error_message', 'Skipping revalidation')
-    if error.get('error_type') == 'not':
-        return error.get('error_message', 'Error has no schema')
+        return [error.get('error_message', 'Skipping revalidation')]
     schema = error.get('schema', {})
+    if not schema:
+        log.error('Cannot re-validate error for %s - schema key is missing!',
+                  container.get('name', container.get('label', 'NA')))
+        log.error('For best results, please run the latest version of GRP-3')
+        return [error.get('error_message', 'Error schema is missing, cannot re-validate.')]
     item = error.get('item')
     value, found_value = dictionary_lookup(item, container)
-    field_required = schema.pop('required', False)
-
     if found_value is False:
-        if field_required:
-            validation_output = '\'{}\' is required'.format(item)
-        else:
-            log.warning('Could not find %s on file: %s. Please confirm metadata are not missing.', item,
-                        container.get('name'))
-        return validation_output
 
-    try:
-        jsonschema.validate(value, schema)
+        err_string = 'Could not find {} on file: {}. Please confirm metadata are not missing.'.format(
+            item,
+            container.get('name', container.get('label', 'NA'))
+        )
+        log.error(err_string)
+        log.error(error)
+        return [error.get('error_msg', err_string)]
 
-    except jsonschema.ValidationError as e:
-        validation_output = e.message
+    validation_output = get_schema_errors(value, schema)
 
     return validation_output
+
+
+def get_schema_errors(value, schema):
+    """
+    Validate the value against the schema provided
+    Args:
+        value: the value against which to validate the schema
+        schema (dict): jsonschema object against which to validate the value
+
+    Returns:
+        list: a list of validation errors
+    """
+    # Initialize json schema validator
+    validator = jsonschema.Draft7Validator(schema)
+    # Initialize list object for storing validation error messages
+    msg_list = list()
+    for error in sorted(validator.iter_errors(value), key=str):
+        msg_list.append(error.message)
+    return msg_list
 
 
 def get_container_errors(error_log, file_dict, container_dictionary):
@@ -305,16 +322,22 @@ def get_container_errors(error_log, file_dict, container_dictionary):
     Returns:
         list: A list of error dictionaries
     """
-    error_dictionaries = []
+    error_dictionaries = list()
+    err_msg_list = list()
     for error in error_log:
         error_dictionary = copy.deepcopy(container_dictionary)
         error_status = validate(file_dict, error)
-        if error_status is True:
+        if error_status == list():
             error_dictionary['resolved'] = True
+            error_dictionaries.append(error_dictionary)
         else:
-            error_dictionary['resolved'] = False
-            error_dictionary['error'] = error_status
-        error_dictionaries.append(error_dictionary)
+            for error_msg in error_status:
+                tmp_error_dictionary = copy.deepcopy(error_dictionary)
+                if error_msg not in err_msg_list:
+                    err_msg_list.append(error_msg)
+                    tmp_error_dictionary['resolved'] = False
+                    tmp_error_dictionary['error'] = error_msg
+                    error_dictionaries.append(tmp_error_dictionary)
     return error_dictionaries
 
 
@@ -336,7 +359,7 @@ def get_error_origin_file_dict(container_dict, error_log_name):
     return file_dict
 
 
-def get_errors(error_containers, client):
+def get_errors(error_containers, client, delete_errors=False):
     """Generate a list of errors of all the containers and set the resolution
     and error message for each, if the error.log file DNE, we create a single
     error for the container without a message and resolved set to True
@@ -355,6 +378,7 @@ def get_errors(error_containers, client):
         if error_log_filenames:
             for error_log_filename in error_log_filenames:
                 origin_file_dict = get_error_origin_file_dict(container.to_dict(), error_log_filename)
+                log.critical('Reading file %s on %s %s', error_log_filename, container.container_type, container.id)
                 error_log = json.loads(container.read_file(error_log_filename))
                 container_errors = get_container_errors(error_log,
                                                         origin_file_dict,
@@ -365,7 +389,7 @@ def get_errors(error_containers, client):
                     container_error in
                     container_errors
                 ])
-                if resolved:
+                if resolved and delete_errors:
                     log.info('Deleting {} for {}={}...'.format(
                         error_log_filename,
                         container.container_type,
@@ -427,6 +451,7 @@ def main():
         log.info(gear_context.config)
         log.info(gear_context.destination)
         container_type = gear_context.config.get('container_type')
+        delete_error_logs = gear_context.config.get('delete_error_logs')
         analysis = gear_context.client.get_analysis(
             gear_context.destination['id']
         )
@@ -445,7 +470,7 @@ def main():
         log.info('Resolving status for invalid containers...')
         # TODO: Figure out the validator stuff, maybe have our validation be a
         # pip module?
-        errors = get_errors(error_containers, gear_context.client)
+        errors = get_errors(error_containers, gear_context.client, delete_errors=delete_error_logs)
         error_count = len(errors)
 
         log.info('Writing error report')

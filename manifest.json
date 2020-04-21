@@ -8,11 +8,11 @@
   "license": "Other",
   "source": "https://github.com/flywheel-apps/GRP-2",
   "url": "",
-  "version": "1.1.0",
+  "version": "2.0.0",
   "custom": {
     "gear-builder": {
       "category": "analysis",
-      "image": "flywheel/metadata-error-report-grp-2:1.1.0"
+      "image": "flywheel/metadata-error-report-grp-2:2.0.0"
     },
     "flywheel": {
       "suite": "Metadata Import and Validation"
@@ -38,6 +38,11 @@
       "default": "",
       "description": "Optional report name override",
       "type": "string"
+    },
+    "delete_error_logs": {
+      "default": false,
+      "description": "If true, delete error.log.json files and remove error status from acquisition containers",
+      "type": "bool"
     }
   },
   "environment": {},
