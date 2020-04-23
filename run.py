@@ -367,6 +367,7 @@ def get_errors(error_containers, client, delete_errors=False):
     Args:
         error_containers (list): list of container dictionaries
         client (Client): An api client
+        delete_errors (bool): whether to delete error.log.json files and remove error tags
     Returns:
         list: A list of errors (many to one container)
     """
