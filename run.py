@@ -378,7 +378,7 @@ def get_errors(error_containers, client, delete_errors=False):
         if error_log_filenames:
             for error_log_filename in error_log_filenames:
                 origin_file_dict = get_error_origin_file_dict(container.to_dict(), error_log_filename)
-                log.critical('Reading file %s on %s %s', error_log_filename, container.container_type, container.id)
+                log.info('Reading file %s on %s %s', error_log_filename, container.container_type, container.id)
                 error_log = json.loads(container.read_file(error_log_filename))
                 container_errors = get_container_errors(error_log,
                                                         origin_file_dict,
