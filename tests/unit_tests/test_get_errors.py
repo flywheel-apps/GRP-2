@@ -4,7 +4,7 @@ import run
 
 
 def test_container_errors_all_true():
-    with mock.patch('run.validate', return_value=True):
+    with mock.patch('run.validate', return_value=list()):
         errors = run.get_container_errors([{}], {}, {})
 
     assert len(errors) == 1
@@ -13,7 +13,7 @@ def test_container_errors_all_true():
 
 
 def test_container_errors_all_error():
-    with mock.patch('run.validate', return_value='Oh no!'):
+    with mock.patch('run.validate', return_value=['Oh no!']):
         errors = run.get_container_errors([{}], {}, {})
 
     assert len(errors) == 1
@@ -22,7 +22,7 @@ def test_container_errors_all_error():
 
 
 def test_container_errors_multiple_error():
-    with mock.patch('run.validate', side_effect=[True, 'Oh no!']):
+    with mock.patch('run.validate', side_effect=[list(), ['Oh no!']]):
         errors = run.get_container_errors([{}, {}], {}, {})
 
     assert len(errors) == 2
