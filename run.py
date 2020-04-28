@@ -3,10 +3,13 @@
 import csv
 import datetime
 import copy
-import flywheel
 import json
 import logging
+
+import flywheel
 import jsonschema
+import re
+
 
 ERROR_LOG_FILENAME_SUFFIX = 'error.log.json'
 CSV_HEADERS = [
@@ -62,7 +65,7 @@ def get_uri(client, container):
         str: A uri that can be used to find the
             container
     """
-    first = ':'.join(client.get_config().site.api_url.split(':')[:-1])
+    first = get_uri_prefix(client.get_config().site.api_url)
     uri = None
     if container.container_type == 'project':
         uri = first + '/#/projects/{}'.format(container.id)
@@ -73,6 +76,20 @@ def get_uri(client, container):
     else:
         uri = first + '/#/projects/{}'.format(container.parents.project)
     return uri
+
+
+def get_uri_prefix(client_config_site_api_url):
+    """
+    Removes /api and port (i.e. :443) from client_config_site_api_url
+    Args:
+        client_config_site_api_url (str): the value for client.get_config().site.api_url
+
+    Returns:
+        str: the uri without /api or port information
+    """
+    remove_regex = r'(:[\d]+)?/api'
+    return_prefix = re.sub(remove_regex, '', client_config_site_api_url)
+    return return_prefix
 
 
 def add_additional_info(error_containers, client):
