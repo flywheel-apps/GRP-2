@@ -20,7 +20,7 @@ class MockContainer(object):
 
 class MockClient(object):
     def get_config(self):
-        return mock.MagicMock(site=mock.MagicMock(api_url='https://hostname:port'))
+        return mock.MagicMock(site=mock.MagicMock(api_url='https://hostname:443/api'))
 
 
 def test_get_uri_for_project():
@@ -54,3 +54,11 @@ def test_get_uri_for_acquisition():
     uri = run.get_uri(client, acquisition)
     assert uri == 'https://hostname/#/projects/project_id/sessions/session_id?tab=data'
 
+def test_get_uri_prefix():
+    test_uri = 'https://covid19.flywheel.io/api'
+    expected = 'https://covid19.flywheel.io'
+    assert expected == run.get_uri_prefix(test_uri)
+
+    test_uri = 'https://ss.ce.flywheel.io:443/api'
+    expected = 'https://ss.ce.flywheel.io'
+    assert expected == run.get_uri_prefix(test_uri)
