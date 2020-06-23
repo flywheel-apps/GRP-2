@@ -42,7 +42,7 @@
     "delete_error_logs": {
       "default": false,
       "description": "If true, delete error.log.json files and remove error status from acquisition containers",
-      "type": "bool"
+      "type": "boolean"
     }
   },
   "environment": {},
